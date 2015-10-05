@@ -32,10 +32,12 @@ class NTREK
   public:
   	NTREK(int board_id);
   	int setup(int setup_mode);
-  	void set(int io_pin, int io_val);
+  	void io_set(int io_pin, int io_val);
+    bool io_toggle(int io_pin);
   private:
     static int _board_id;
     static int _setup_mode;
+    static bool _io_state[54];
 };
 
 #endif
