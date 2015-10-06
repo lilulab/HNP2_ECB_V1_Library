@@ -1,5 +1,5 @@
-#ifndef NTREK_BOARD_H
-#define NTREK_BOARD_H
+#ifndef BOARD_ECB_H
+#define BOARD_ECB_H
 
 static const int Board_ID_A101 = 101;
 static const int Board_ID_A102 = 102;
