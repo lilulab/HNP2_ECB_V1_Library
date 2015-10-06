@@ -12,5 +12,6 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   Ntrek.io_toggle(LED_GREEN);
+  Ntrek.io_toggle(LED_RED);
   delay(500);
 }

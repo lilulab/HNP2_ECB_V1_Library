@@ -3,6 +3,7 @@
 
 int NTREK::_board_id = 0;
 int NTREK::_setup_mode = 0;
+bool NTREK::_io_state[54];
 
 NTREK::NTREK(int board_id) {
 	_board_id = board_id;
@@ -33,8 +34,11 @@ int NTREK::setup(int setup_mode) {
   // digitalWrite(LED_GREEN,LED_ON);
   // digitalWrite(LED_RED,LED_ON);
 
-  
-  delay(1000);
+  // delay 1s, turn off both LED in the middle of 1s
+  delay(500);
+  this->io_set(LED_GREEN, LED_OFF);  
+  this->io_set(LED_RED, LED_OFF);
+  delay(500);
   
   // Now turn 3.3v regs on to power the Modular Slots.
   this->io_set(IO_3V_EN1, HIGH);
@@ -63,6 +67,9 @@ int NTREK::setup(int setup_mode) {
   // ADC ref source
   analogReference(EXTERNAL);// (DEFAULT, INTERNAL, INTERNAL1V1, INTERNAL2V56, or EXTERNAL)
   
+  // Turn on Green LED
+  this->io_set(LED_GREEN, LED_ON);  
+
   // Save setup mode
 	_setup_mode = setup_mode;
 
