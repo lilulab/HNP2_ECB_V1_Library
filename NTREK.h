@@ -2,9 +2,9 @@
   NTREK.h - Library for HNPv2 Project ECB NTREK Library.
   NTREK - Neuromuscular Training and Rehabilitation Embedded Kit.
   Created by Lu Li (lxl361@case), Sep 2015.
-  Version 2.1
+  Version 1.0
   Online Doc: https://sites.google.com/a/case.edu/n-trek-wiki
-  Repo: https://github.com/lilulab
+  Repo: https://github.com/lilulab/HNP2_ECB_V1_Library
 */
 
 #ifndef NTREK_H
