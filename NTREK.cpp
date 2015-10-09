@@ -50,8 +50,7 @@ int NTREK::setup(int setup_mode) {
   delay(500);
   
   // Now turn 3.3v regs on to power the Modular Slots.
-  this->io_set(IO_3V_EN1, HIGH);
-  this->io_set(IO_3V_EN2, HIGH);
+
   // digitalWrite(IO_3V_EN1, HIGH);
   // digitalWrite(IO_3V_EN2, HIGH);
 
