@@ -34,7 +34,7 @@ int8_t pw_max = 0xFA;
 #define NUM_CHANNELS 8
 #define SAMPLE_PER_CYCLE 6
 uint8_t AA_pulse_width[NUM_CHANNELS] = {0,0,0,0,0,0,0,0};
-uint8_t AA_amplitude[NUM_CHANNELS] = {20,20,20,20,20,20,20,0};
+uint8_t AA_amplitude[NUM_CHANNELS] = {38,38,38,38,38,38,38,0}; 
 
 uint8_t AA_Step_L[NUM_CHANNELS][SAMPLE_PER_CYCLE] = 
   {
