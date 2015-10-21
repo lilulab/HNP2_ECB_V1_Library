@@ -66,11 +66,18 @@ int NTREK::setup(int setup_mode) {
   pinMode(IO_D07, OUTPUT);
   pinMode(IO_D08, OUTPUT);
   pinMode(IO_D09, OUTPUT);
-  pinMode(IO_D10, OUTPUT);
-  pinMode(IO_D11, OUTPUT);    
+  
+  pinMode(IO_D10, INPUT); //FS_STOP 
+    digitalWrite(IO_D10, HIGH);// turn on pullup resistors
+
+  pinMode(IO_D11, INPUT); //FS_GO  
+    digitalWrite(IO_D11, HIGH);// turn on pullup resistors
+
 
   pinMode(IO_D12, OUTPUT);
-  pinMode(IO_D13, OUTPUT);     
+  
+  pinMode(IO_D13, INPUT);   //FS_STIM_OFF   
+    digitalWrite(IO_D13, HIGH);// turn on pullup resistors
   
   // ADC ref source
   analogReference(EXTERNAL);// (DEFAULT, INTERNAL, INTERNAL1V1, INTERNAL2V56, or EXTERNAL)
