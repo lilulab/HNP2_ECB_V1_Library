@@ -4,7 +4,7 @@
 // Signal Conditioning Board Remap
 #define SB2_TXD IO_TXD3
 #define FSR_HEL_L IO_ADC00
-#define FSR_HEL_L IO_ADC02
+#define FSR_HEL_R IO_ADC02
 #define JNT_HIP_L IO_ADC04
 #define JNT_KNE_L IO_ADC06
 #define PRS_CH1 IO_ADC08

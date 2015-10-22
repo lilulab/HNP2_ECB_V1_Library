@@ -34,8 +34,11 @@ int8_t pw_max = 0xFA;
 // Value for VCK5's walking pattern
 #define NUM_CHANNELS 12
 #define NUM_BOARDS 2
-#define SAMPLE_PER_CYCLE 6
-uint8_t VCK5_pulse_width[NUM_BOARDS][NUM_CHANNELS] = 
+#define GAIT_CYCLE_STEP_MAX 8
+
+#define STEP_DURATION 2000
+
+uint8_t VCK5_pulse_width_zeros[NUM_BOARDS][NUM_CHANNELS] = 
     
   {
     {0,0,0,0, 0,0,0,0, 0,0,0,0},
@@ -51,6 +54,10 @@ uint8_t VCK5_amplitude[NUM_BOARDS][NUM_CHANNELS] =
 uint8_t VCK5_channel_delays[NUM_CHANNELS] = 
     {2,4,6,8,  10,12,14,16,  18,20,22,24};
 
+// Value for VCK5's walking pattern
+#define NUM_CHANNELS 12
+#define NUM_BOARDS 2
+#define SAMPLE_PER_CYCLE 6
 
 // Finger switch states machine
 #define FSSM_STATE_START  1 
@@ -86,9 +93,9 @@ void setup() {
 
   // Setup CwruStim library
   // setupCwruStim(); // One function setup everyting to replace three lines below.
-  // // Stim_Perc.init(STIM_MODE_PERC); // Initialize the Stim board and delete old schedule
-  // // Stim_Perc.config(STIM_SETTING_DEFAULT); // Setup channels, schedule, and events
-  // // Stim_Perc.start(UECU_SYNC_MSG); // Send start command (Sync message)
+   Stim_Perc.init(STIM_MODE_PERC); // Initialize the Stim board and delete old schedule
+   Stim_Perc.config(STIM_SETTING_DEFAULT); // Setup channels, schedule, and events
+   Stim_Perc.start(UECU_SYNC_MSG); // Send start command (Sync message)
 
   Serial.begin(9600);
 
@@ -119,6 +126,7 @@ void loop() {
       delay(10);
       if (digitalRead(FS_GO) == LOW) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_GO);
+        RunPercStimOnce(finger_switch_output, STEP_DURATION/GAIT_CYCLE_STEP_MAX);
       }
     } else if (digitalRead(FS_STOP) == LOW) {
       delay(10);
@@ -151,6 +159,65 @@ int8_t DemoRunSweep4CH(unsigned long delay_ms) {
     delay(delay_ms); // delay ms
   }
   return 1;
+}
+
+int8_t RunPercStimOnce(int8_t gait_type, unsigned long delay_ms) {
+
+  uint8_t pulse_width_i = 0;
+  uint8_t amplitude_i = 0;
+
+  int8_t gait_cycle_step = 0;
+
+  // loop all gait cycle steps
+  for (gait_cycle_step = 0; gait_cycle_step < GAIT_CYCLE_STEP_MAX; gait_cycle_step++ ) {
+
+    // loop all channels
+    for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+      switch (gait_type) {
+        case FSSM_RESULT_NO_STIM:
+          pulse_width_i = VCK5_pulse_width_zeros[1][i];
+        break;
+
+        case FSSM_RESULT_EXE_STAND:
+          pulse_width_i = VCK5_pulse_width_zeros[1][i];
+        break;
+
+        case FSSM_RESULT_EXE_LSTEP:
+          pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step];
+          amplitude_i = VCK5_amplitude[1][i];
+
+        break;
+
+        case FSSM_RESULT_EXE_RSTEP:
+          pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step];
+          amplitude_i = VCK5_amplitude[1][i];
+
+        break;
+
+        case FSSM_RESULT_EXE_SIT:
+          pulse_width_i = VCK5_pulse_width_zeros[1][i];
+        break; 
+      }
+
+        Serial.print("PercStim_state: ");
+        Serial.print(gait_type);
+        Serial.print(", GaitCycle =");
+        Serial.print(gait_cycle_step);
+        Serial.print(", CH");
+        Serial.print(i);
+        Serial.print(", PW=");
+        Serial.print(pulse_width_i);
+        Serial.print(", AMP=");
+        Serial.print(amplitude_i);
+        Serial.println(";");
+        
+      Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+      //delay(10);
+    }// end channels loop
+    delay(delay_ms); // delay ms
+  } // end cycle loop
+  
+  return 1;  
 }
 
 int8_t FingerSwitchStatesMachine(int8_t * current_state, int8_t trigger_event) {
