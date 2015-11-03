@@ -36,7 +36,7 @@ int8_t pw_max = 0xFA;
 #define NUM_BOARDS 2
 #define GAIT_CYCLE_STEP_MAX 8
 
-#define STEP_DURATION 2000
+#define STEP_DURATION 1000
 
 uint8_t VCK5_pulse_width_zeros[NUM_BOARDS][NUM_CHANNELS] = 
     
@@ -97,7 +97,7 @@ void setup() {
    Stim_Perc.config(STIM_SETTING_DEFAULT); // Setup channels, schedule, and events
    Stim_Perc.start(UECU_SYNC_MSG); // Send start command (Sync message)
 
-  Serial.begin(9600);
+  Serial.begin(115200);
 
 }
 
@@ -312,7 +312,7 @@ int8_t FSSM_run_once(int8_t test_event) {
   result = FingerSwitchStatesMachine(&finger_switch_state, test_event);
   FSSM_led_tester(result);
 
-  delay(500);
+  //delay(500);
   return result;
 }
 
