@@ -10,7 +10,8 @@
 #include <NTREK.h>
 #include <CwruStim.h>
 #include "StimPattern_VCK5.h"
-//#include <TimerOne.h>
+#include <TimerOne.h>
+
 
 // Create object ECB
 NTREK ECB(Board_ID_A101);
@@ -83,6 +84,13 @@ int8_t finger_switch_state = FSSM_STATE_START;
 int8_t finger_switch_event = FSSM_EVENT_NONE;
 int8_t finger_switch_output = FSSM_RESULT_NONE;
 
+// Timer one
+static const int16_t TIMER_SEC_MAX = 60;
+static const int16_t TIMER_MS_MAX = 1000;
+int16_t timer1_sec_counter = 0;
+int16_t timer1_ms_counter = 0;
+
+
 void setup() {
   // Setup the board hardware
   ECB.setup(SETUP_MODE_DEFAULT);
@@ -98,6 +106,9 @@ void setup() {
    Stim_Perc.start(UECU_SYNC_MSG); // Send start command (Sync message)
 
   Serial.begin(115200);
+
+  Timer1.initialize(1000); // set a timer of length 1000 microseconds (or 0.001 sec - or 1kHz)
+  Timer1.attachInterrupt( timerOneIsr ); // attach the service routine here
 
 }
 
@@ -140,6 +151,37 @@ void loop() {
 
 
 
+}
+
+/// --------------------------
+/// Custom ISR Timer Routine
+/// --------------------------
+void timerOneIsr()
+{
+    timer1_ms_counter++; // increment millisec counter
+    if (timer1_ms_counter >= TIMER_MS_MAX) {
+      timer1_ms_counter = 0; // reset
+
+      timer1_sec_counter ++; // increment second counter
+      if (timer1_sec_counter >= TIMER_SEC_MAX) {
+        timer1_sec_counter = 0; // reset
+        // Increment miniutes counter 
+      }
+
+    }
+    // Toggle LED
+    ECB.io_toggle(LED_GREEN);
+}
+
+void timerOneClear (void) {
+  Timer1.stop();
+  timer1_ms_counter = 0;
+  timer1_sec_counter = 0;
+}
+
+void timerOneRestart (void) {
+  timerOneClear();
+  Timer1.resume();
 }
 
 // Generate periodic sweep function
