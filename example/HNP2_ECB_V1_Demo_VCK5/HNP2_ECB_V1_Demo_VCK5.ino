@@ -178,10 +178,11 @@ void timerOneIsr()
       }
 
     }
-    // Toggle LED
-    ECB.io_toggle(LED_GREEN);
 
     #if defined(DEBUG_TIMER) && defined(DEBUG_ON)
+      // Toggle LED
+      //ECB.io_toggle(LED_GREEN);
+
       Serial.print(timer1_sec_counter);
       Serial.print("s\t");
       Serial.print(timer1_ms_counter);
