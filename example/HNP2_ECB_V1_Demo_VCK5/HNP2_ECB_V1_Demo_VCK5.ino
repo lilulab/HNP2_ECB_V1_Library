@@ -344,12 +344,95 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
         break;
 
         case FSSM_RESULT_EXE_RSTEP:
+
+          gait_finished_count = 0;
+
           for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+            gait_cycle_step[i] = 0;
+            gait_cycle_next_step[i] = 1;
+
             pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step[i]];
             amplitude_i = VCK5_amplitude[1][i];
-            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
-            delay(10);
+
+            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
           }
+          
+          // Reset timmer1
+          timerOneRestart();
+
+          while (gait_finished_count < NUM_CHANNELS) {
+
+            // loop all channels
+            for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+
+              // zero out the step regs.
+
+              current_gait_time = 0.0;
+              next_event_time = 0.0;
+
+              
+
+                current_gait_time = (float)timer1_sec_counter + (float)timer1_ms_counter / 1000;
+
+                // decide gait cycle step for each channels.
+                // for (gait_cycle_step = 0; gait_cycle_step < GAIT_CYCLE_STEP_MAX; gait_cycle_step++ ) 
+
+                if ((current_gait_time > gait_duration) && (gait_finished_count >= NUM_CHANNELS)) { // if longer than max duration
+                  gait_cycle_step[i] = GAIT_CYCLE_STEP_MAX; // last step
+                  gait_finished_count++; // mark this channel as finished by add to the total counter.
+                } else {
+                  next_event_time = ((float)gait_walk_R_B1_PP[i][gait_cycle_next_step[i]] / 10000 ) * gait_duration; //percentage (at next cycle step) * total_duration
+                  if (current_gait_time < next_event_time) { // if less than next event time 
+                    //do nothing
+                  } else if (current_gait_time >= next_event_time) { // if pass the event time
+                    gait_cycle_step[i]++; // cycle step add one
+                    gait_cycle_next_step[i] = gait_cycle_step[i] + 1;
+                    if (gait_cycle_step[i] > GAIT_CYCLE_STEP_MAX) { // overflow proof
+                      gait_cycle_step[i] = GAIT_CYCLE_STEP_MAX;
+                      gait_cycle_next_step[i] = GAIT_CYCLE_STEP_MAX;
+                      gait_finished_count++; // mark this channel as finished by add to the total counter.
+                    }  
+
+                      pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step[i]];
+                      amplitude_i = VCK5_amplitude[1][i];
+
+                      Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+                      
+                      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+                        Serial.print("Current_time: ");
+                        Serial.print(current_gait_time);
+                        Serial.print("\t,Next_event_time: ");
+                        Serial.print(next_event_time);
+                        Serial.print("\t,Next_PP: ");
+                        Serial.print(gait_walk_R_B1_PP[i][gait_cycle_next_step[i]]);
+                        Serial.print("\t,PercStim_state: ");
+                        Serial.print(gait_type);
+                        Serial.print("\t, CH");
+                        Serial.print(i);
+                        Serial.print("\t, GaitCycle =");
+                        Serial.print(gait_cycle_step[i]);
+                        Serial.print("\t, PW=");
+                        Serial.print(pulse_width_i);
+                        Serial.print("\t, AMP=");
+                        Serial.print(amplitude_i);
+                        Serial.print("\t, g_f_count=");
+                        Serial.print(gait_finished_count);
+                        
+                        Serial.println(";");
+
+                      #endif      
+                  }
+                  
+                }
+
+
+                
+
+              
+            } //end channels loop
+
+          } //end while
+
         break;
 
         case FSSM_RESULT_EXE_SIT:
