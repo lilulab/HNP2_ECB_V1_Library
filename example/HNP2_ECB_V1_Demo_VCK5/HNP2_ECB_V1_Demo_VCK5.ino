@@ -12,6 +12,11 @@
 #include "StimPattern_VCK5.h"
 #include <TimerOne.h>
 
+#define DEBUG_ON 1 //Comment this out if want to disenable all debug serial printing.
+#define DEBUG_GAIT 1  //Comment this out if want to disenable gait info debug.
+//#define DEBUG_TIMER 1 //Comment this out if want to disenable timer debug.
+#define DEBUG_FSSM 1  //Comment this out if want to disenable finger switch debug.
+
 
 // Create object ECB
 NTREK ECB(Board_ID_A101);
@@ -35,9 +40,9 @@ int8_t pw_max = 0xFA;
 // Value for VCK5's walking pattern
 #define NUM_CHANNELS 12
 #define NUM_BOARDS 2
-#define GAIT_CYCLE_STEP_MAX 8
+#define GAIT_CYCLE_STEP_MAX 7
 
-#define STEP_DURATION 1000
+float STEP_DURATION = 2.3;
 
 uint8_t VCK5_pulse_width_zeros[NUM_BOARDS][NUM_CHANNELS] = 
     
@@ -85,10 +90,13 @@ int8_t finger_switch_event = FSSM_EVENT_NONE;
 int8_t finger_switch_output = FSSM_RESULT_NONE;
 
 // Timer one
-static const int16_t TIMER_SEC_MAX = 60;
-static const int16_t TIMER_MS_MAX = 1000;
-int16_t timer1_sec_counter = 0;
-int16_t timer1_ms_counter = 0;
+// static const uint16_t TIMER_MIN_MAX = 60;
+// static const uint16_t TIMER_SEC_MAX = 60;
+static const uint16_t TIMER_SEC_MAX = 43200; //=60*60*12 = number of seconds in 12 hours.
+static const uint16_t TIMER_MS_MAX = 1000;
+// uint16_t timer1_min_counter = 0;
+uint16_t timer1_sec_counter = 0;
+uint16_t timer1_ms_counter = 0;
 
 
 void setup() {
@@ -137,7 +145,8 @@ void loop() {
       delay(10);
       if (digitalRead(FS_GO) == LOW) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_GO);
-        RunPercStimOnce(finger_switch_output, STEP_DURATION/GAIT_CYCLE_STEP_MAX);
+        RunPercStimOnce(finger_switch_output, STEP_DURATION);
+        // RunPercStimOnce(finger_switch_output, 2000);
       }
     } else if (digitalRead(FS_STOP) == LOW) {
       delay(10);
@@ -171,6 +180,13 @@ void timerOneIsr()
     }
     // Toggle LED
     ECB.io_toggle(LED_GREEN);
+
+    #if defined(DEBUG_TIMER) && defined(DEBUG_ON)
+      Serial.print(timer1_sec_counter);
+      Serial.print("s\t");
+      Serial.print(timer1_ms_counter);
+      Serial.println("ms\t");
+    #endif
 }
 
 void timerOneClear (void) {
@@ -203,64 +219,215 @@ int8_t DemoRunSweep4CH(unsigned long delay_ms) {
   return 1;
 }
 
-int8_t RunPercStimOnce(int8_t gait_type, unsigned long delay_ms) {
+// Timer driven stim timing output
+int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
 
   uint8_t pulse_width_i = 0;
   uint8_t amplitude_i = 0;
 
-  int8_t gait_cycle_step = 0;
+  size_t gait_cycle_step[NUM_CHANNELS];
+  size_t gait_cycle_next_step[NUM_CHANNELS];
 
-  // loop all gait cycle steps
-  for (gait_cycle_step = 0; gait_cycle_step < GAIT_CYCLE_STEP_MAX; gait_cycle_step++ ) {
 
-    // loop all channels
-    for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+  uint8_t gait_finished_count = 0;
+
+  float current_gait_time = 0.0;
+  float next_event_time = 0.0;
+
       switch (gait_type) {
         case FSSM_RESULT_NO_STIM:
-          pulse_width_i = VCK5_pulse_width_zeros[1][i];
+          for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+            pulse_width_i = VCK5_pulse_width_zeros[1][i];
+            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            delay(10);
+          }
         break;
 
         case FSSM_RESULT_EXE_STAND:
-          pulse_width_i = VCK5_pulse_width_zeros[1][i];
+          for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+            pulse_width_i = VCK5_pulse_width_zeros[1][i];
+            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            delay(10);
+          }
         break;
 
         case FSSM_RESULT_EXE_LSTEP:
-          pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step];
-          amplitude_i = VCK5_amplitude[1][i];
+
+          gait_finished_count = 0;
+
+          for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+            gait_cycle_step[i] = 0;
+            gait_cycle_next_step[i] = 1;
+
+            pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step[i]];
+            amplitude_i = VCK5_amplitude[1][i];
+
+            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+          }
+          
+          // Reset timmer1
+          timerOneRestart();
+
+          while (gait_finished_count < NUM_CHANNELS) {
+
+            // loop all channels
+            for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+
+              // zero out the step regs.
+
+              current_gait_time = 0.0;
+              next_event_time = 0.0;
+
+              
+
+                current_gait_time = (float)timer1_sec_counter + (float)timer1_ms_counter / 1000;
+
+                // decide gait cycle step for each channels.
+                // for (gait_cycle_step = 0; gait_cycle_step < GAIT_CYCLE_STEP_MAX; gait_cycle_step++ ) 
+
+                if ((current_gait_time > gait_duration) && (gait_finished_count >= NUM_CHANNELS)) { // if longer than max duration
+                  gait_cycle_step[i] = GAIT_CYCLE_STEP_MAX; // last step
+                  gait_finished_count++; // mark this channel as finished by add to the total counter.
+                } else {
+                  next_event_time = ((float)gait_walk_L_B1_PP[i][gait_cycle_next_step[i]] / 10000 ) * gait_duration; //percentage (at next cycle step) * total_duration
+                  if (current_gait_time < next_event_time) { // if less than next event time 
+                    //do nothing
+                  } else if (current_gait_time >= next_event_time) { // if pass the event time
+                    gait_cycle_step[i]++; // cycle step add one
+                    gait_cycle_next_step[i] = gait_cycle_step[i] + 1;
+                    if (gait_cycle_step[i] > GAIT_CYCLE_STEP_MAX) { // overflow proof
+                      gait_cycle_step[i] = GAIT_CYCLE_STEP_MAX;
+                      gait_cycle_next_step[i] = GAIT_CYCLE_STEP_MAX;
+                      gait_finished_count++; // mark this channel as finished by add to the total counter.
+                    }  
+
+                      pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step[i]];
+                      amplitude_i = VCK5_amplitude[1][i];
+
+                      Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+                      
+                      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+                        Serial.print("Current_time: ");
+                        Serial.print(current_gait_time);
+                        Serial.print("\t,Next_event_time: ");
+                        Serial.print(next_event_time);
+                        Serial.print("\t,Next_PP: ");
+                        Serial.print(gait_walk_L_B1_PP[i][gait_cycle_next_step[i]]);
+                        Serial.print("\t,PercStim_state: ");
+                        Serial.print(gait_type);
+                        Serial.print("\t, CH");
+                        Serial.print(i);
+                        Serial.print("\t, GaitCycle =");
+                        Serial.print(gait_cycle_step[i]);
+                        Serial.print("\t, PW=");
+                        Serial.print(pulse_width_i);
+                        Serial.print("\t, AMP=");
+                        Serial.print(amplitude_i);
+                        Serial.print("\t, g_f_count=");
+                        Serial.print(gait_finished_count);
+                        
+                        Serial.println(";");
+
+                      #endif      
+                  }
+                  
+                }
+
+
+                
+
+              
+            } //end channels loop
+
+          } //end while
 
         break;
 
         case FSSM_RESULT_EXE_RSTEP:
-          pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step];
-          amplitude_i = VCK5_amplitude[1][i];
-
+          for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+            pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step[i]];
+            amplitude_i = VCK5_amplitude[1][i];
+            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            delay(10);
+          }
         break;
 
         case FSSM_RESULT_EXE_SIT:
-          pulse_width_i = VCK5_pulse_width_zeros[1][i];
+          for (uint8_t i=0; i<NUM_CHANNELS; i++) {
+            pulse_width_i = VCK5_pulse_width_zeros[1][i];
+            Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            delay(10);
+          }
         break; 
       }
-
-        Serial.print("PercStim_state: ");
-        Serial.print(gait_type);
-        Serial.print(", GaitCycle =");
-        Serial.print(gait_cycle_step);
-        Serial.print(", CH");
-        Serial.print(i);
-        Serial.print(", PW=");
-        Serial.print(pulse_width_i);
-        Serial.print(", AMP=");
-        Serial.print(amplitude_i);
-        Serial.println(";");
         
-      Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+      //Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
       //delay(10);
-    }// end channels loop
-    delay(delay_ms); // delay ms
-  } // end cycle loop
-  
+     
   return 1;  
 }
+
+// // Fix duration
+// int8_t RunPercStimOnce(int8_t gait_type, unsigned long gait_duration) {
+
+//   uint8_t pulse_width_i = 0;
+//   uint8_t amplitude_i = 0;
+
+//   size_t gait_cycle_step = 0;
+
+//   // loop all gait cycle steps
+//   for (gait_cycle_step = 0; gait_cycle_step < GAIT_CYCLE_STEP_MAX; gait_cycle_step++ ) {
+
+//     // loop all channels
+//     for (size_t i=0; i<NUM_CHANNELS; i++) {
+//       switch (gait_type) {
+//         case FSSM_RESULT_NO_STIM:
+//           pulse_width_i = VCK5_pulse_width_zeros[1][i];
+//         break;
+
+//         case FSSM_RESULT_EXE_STAND:
+//           pulse_width_i = VCK5_pulse_width_zeros[1][i];
+//         break;
+
+//         case FSSM_RESULT_EXE_LSTEP:
+//           pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step];
+//           amplitude_i = VCK5_amplitude[1][i];
+
+//         break;
+
+//         case FSSM_RESULT_EXE_RSTEP:
+//           pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step];
+//           amplitude_i = VCK5_amplitude[1][i];
+
+//         break;
+
+//         case FSSM_RESULT_EXE_SIT:
+//           pulse_width_i = VCK5_pulse_width_zeros[1][i];
+//         break; 
+//       }
+
+//         #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+//           Serial.print("PercStim_state: ");
+//           Serial.print(gait_type);
+//           Serial.print(", GaitCycle =");
+//           Serial.print(gait_cycle_step);
+//           Serial.print(", CH");
+//           Serial.print(i);
+//           Serial.print(", PW=");
+//           Serial.print(pulse_width_i);
+//           Serial.print(", AMP=");
+//           Serial.print(amplitude_i);
+//           Serial.println(";");
+//         #endif
+        
+//       Stim_Perc.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+//       //delay(10);
+//     }// end channels loop
+//     delay(gait_duration/GAIT_CYCLE_STEP_MAX); // delay ms
+//   } // end cycle loop
+  
+//   return 1;  
+// }
 
 int8_t FingerSwitchStatesMachine(int8_t * current_state, int8_t trigger_event) {
   // states machine
@@ -359,11 +526,13 @@ int8_t FSSM_run_once(int8_t test_event) {
 }
 
 void FSSM_print(void) {
-  Serial.print("FSSM_state= ");
-  Serial.print(finger_switch_state);
-  Serial.print(", FSSM_event= ");
-  Serial.print(finger_switch_event);
-  Serial.print(", FSSM_result= ");
-  Serial.print(finger_switch_output);
-  Serial.println(".");
+  #if defined(DEBUG_FSSM) && defined(DEBUG_ON)
+    Serial.print("FSSM_state= ");
+    Serial.print(finger_switch_state);
+    Serial.print(", FSSM_event= ");
+    Serial.print(finger_switch_event);
+    Serial.print(", FSSM_result= ");
+    Serial.print(finger_switch_output);
+    Serial.println(".");
+  #endif
 }
