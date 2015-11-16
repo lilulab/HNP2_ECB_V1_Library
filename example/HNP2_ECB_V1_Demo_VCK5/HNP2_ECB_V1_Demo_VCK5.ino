@@ -45,6 +45,7 @@ int8_t pw_max = 0xFA;
 float STEP_DURATION_DEFAULT = 2.0;
 float STEP_DURATION_L = 1.33;
 float STEP_DURATION_R = 1.56;
+// TODO: extract step duration from excel file.
 
 uint8_t VCK5_pulse_width_zeros[NUM_BOARDS][NUM_CHANNELS] = 
     
@@ -220,7 +221,7 @@ int8_t SweepValUpdate(int8_t val, int8_t dir, int8_t min, int8_t max) {
 int8_t DemoRunSweep4CH(unsigned long delay_ms) {
   for (uint8_t i=0; i<4; i++) {
     pulse_width[i] = (uint8_t)SweepValUpdate((uint8_t)pulse_width[i], pw_dir[i], pw_min, pw_max); // update the Pulse width value
-    Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width[i], amplitude[i], 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+    Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width[i], amplitude[i], 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
     delay(delay_ms); // delay ms
   }
   return 1;
@@ -245,7 +246,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
         case FSSM_RESULT_NO_STIM:
           for (uint8_t i=0; i<NUM_CHANNELS; i++) {
             pulse_width_i = VCK5_pulse_width_zeros[1][i];
-            Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
             delay(10);
           }
         break;
@@ -253,7 +254,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
         case FSSM_RESULT_EXE_STAND:
           for (uint8_t i=0; i<NUM_CHANNELS; i++) {
             pulse_width_i = VCK5_pulse_width_zeros[1][i];
-            Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
             delay(10);
           }
         break;
@@ -271,7 +272,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
             pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step[i]];
             amplitude_i = VCK5_amplitude[1][i];
 
-            Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+            Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
           }
           
           // Reset timmer1
@@ -313,7 +314,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
                       pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step[i]];
                       amplitude_i = VCK5_amplitude[1][i];
 
-                      Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+                      Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
                       
                       #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
                         Serial.print("Current_time: ");
@@ -365,7 +366,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
             pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step[i]];
             amplitude_i = VCK5_amplitude[1][i];
 
-            Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+            Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
           }
           
           // Reset timmer1
@@ -407,7 +408,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
                       pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step[i]];
                       amplitude_i = VCK5_amplitude[1][i];
 
-                      Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
+                      Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
                       
                       #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
                         Serial.print("Current_time: ");
@@ -449,13 +450,13 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
         case FSSM_RESULT_EXE_SIT:
           for (uint8_t i=0; i<NUM_CHANNELS; i++) {
             pulse_width_i = VCK5_pulse_width_zeros[1][i];
-            Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+            Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
             delay(10);
           }
         break; 
       }
         
-      //Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+      //Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
       //delay(10);
      
   return 1;  
@@ -514,7 +515,7 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
 //           Serial.println(";");
 //         #endif
         
-//       Stim_Perc_Brd0.cmd_set_evnt(i, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+//       Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
 //       //delay(10);
 //     }// end channels loop
 //     delay(gait_duration/GAIT_CYCLE_STEP_MAX); // delay ms
