@@ -118,7 +118,7 @@ void setup() {
   // setupCwruStim(); // One function setup everyting to replace three lines below.
   Stim_Perc_Brd0.init(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Initialize the Stim board and delete old schedule
   Stim_Perc_Brd0.config(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Setup channels, schedule, and events
-  Stim_Perc_Brd0.start_multi_schedule();
+  Stim_Perc_Brd0.start(UECU_SYNC_MSG);
 
   Serial.begin(115200);
 
@@ -272,6 +272,11 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
             pulse_width_i = gait_walk_L_B1_PW[i][gait_cycle_step[i]];
             amplitude_i = VCK5_amplitude[1][i];
 
+            // set IPI in here
+            //stim.cmd_set_sched( sched_id, sync_signal, duration);
+            Stim_Perc_Brd0.cmd_set_sched(i+1, UECU_SYNC_MSG, gait_walk_L_B1_IPI[i]);
+            delay(gait_walk_L_B1_IPI[i]);
+
             Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
           }
           
@@ -366,6 +371,11 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
             pulse_width_i = gait_walk_R_B1_PW[i][gait_cycle_step[i]];
             amplitude_i = VCK5_amplitude[1][i];
 
+            // set IPI in here
+            //stim.cmd_set_sched( sched_id, sync_signal, duration);
+            Stim_Perc_Brd0.cmd_set_sched(i+1, UECU_SYNC_MSG, gait_walk_R_B1_IPI[i]);
+            delay(gait_walk_R_B1_IPI[i]);
+
             Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event i for port_chn_id i in sched_id 1  
           }
           
@@ -378,7 +388,6 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
             for (uint8_t i=0; i<NUM_CHANNELS; i++) {
 
               // zero out the step regs.
-
               current_gait_time = 0.0;
               next_event_time = 0.0;
 
