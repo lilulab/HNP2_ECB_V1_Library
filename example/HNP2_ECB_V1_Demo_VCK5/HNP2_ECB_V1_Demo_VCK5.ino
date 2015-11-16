@@ -42,7 +42,9 @@ int8_t pw_max = 0xFA;
 #define NUM_BOARDS 2
 #define GAIT_CYCLE_STEP_MAX 7
 
-float STEP_DURATION = 2.3;
+float STEP_DURATION_DEFAULT = 2.0;
+float STEP_DURATION_L = 1.33;
+float STEP_DURATION_R = 1.56;
 
 uint8_t VCK5_pulse_width_zeros[NUM_BOARDS][NUM_CHANNELS] = 
     
@@ -145,7 +147,7 @@ void loop() {
       delay(10);
       if (digitalRead(FS_GO) == LOW) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_GO);
-        RunPercStimOnce(finger_switch_output, STEP_DURATION);
+        RunPercStimOnce(finger_switch_output, STEP_DURATION_DEFAULT);
         // RunPercStimOnce(finger_switch_output, 2000);
       }
     } else if (digitalRead(FS_STOP) == LOW) {
@@ -256,6 +258,8 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
 
           gait_finished_count = 0;
 
+          gait_duration = STEP_DURATION_L; // set gait step duration to left side
+
           for (uint8_t i=0; i<NUM_CHANNELS; i++) {
             gait_cycle_step[i] = 0;
             gait_cycle_next_step[i] = 1;
@@ -347,6 +351,8 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
         case FSSM_RESULT_EXE_RSTEP:
 
           gait_finished_count = 0;
+
+          gait_duration = STEP_DURATION_R; // set gait step duration to right side
 
           for (uint8_t i=0; i<NUM_CHANNELS; i++) {
             gait_cycle_step[i] = 0;
