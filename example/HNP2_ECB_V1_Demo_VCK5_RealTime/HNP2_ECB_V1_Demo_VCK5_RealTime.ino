@@ -97,6 +97,12 @@ int8_t finger_switch_state = FSSM_STATE_START;
 int8_t finger_switch_event = FSSM_EVENT_NONE;
 int8_t finger_switch_output = FSSM_RESULT_NONE;
 
+boolean finger_switch_button_go_current = HIGH;
+boolean finger_switch_button_stop_current = HIGH;
+
+boolean finger_switch_button_go_old = HIGH;
+boolean finger_switch_button_stop_old = HIGH;
+
 // Timer one
 // static const uint16_t TIMER_MIN_MAX = 60;
 // static const uint16_t TIMER_SEC_MAX = 60;
@@ -178,16 +184,17 @@ void loop() {
     if (system_100hz_counter_old != system_100hz_counter_current) {
       // 1Hz tasks
       if (system_100hz_counter_current % (OS_RATE_HZ/1) == 0) {
-        ECB.io_toggle(LED_GREEN);
       } //end 1Hz tasks
 
       // 10Hz tasks
       if (system_100hz_counter_current % (OS_RATE_HZ/10) == 0) {
+        ECB.io_toggle(LED_RED);
         task_finger_switch();
       } //end 10Hz tasks
 
-      // 30Hz tasks
-      if (system_100hz_counter_current % (OS_RATE_HZ/30) == 0) {
+      // 30ms tasks
+      if (system_100hz_counter_current % 3 == 0) {
+        ECB.io_toggle(LED_GREEN);
         task_perc_stim();
       } //end 30Hz tasks
 
@@ -203,15 +210,21 @@ void loop() {
 // Task finger switch
 void task_finger_switch(void) {
 
-    if (digitalRead(FS_GO) == LOW) {
-      delay(5);
-      if (digitalRead(FS_GO) == LOW) {
+  // save last
+  finger_switch_button_go_old = finger_switch_button_go_current;
+  finger_switch_button_stop_old = finger_switch_button_stop_current;
+
+  // get new
+  finger_switch_button_go_current = digitalRead(FS_GO);
+  finger_switch_button_stop_current = digitalRead(FS_STOP);
+
+    if (finger_switch_button_go_current == LOW) {
+      if (finger_switch_button_go_old == HIGH) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_GO);
         //RunPercStimOnce(finger_switch_output, STEP_DURATION_DEFAULT);
       }
-    } else if (digitalRead(FS_STOP) == LOW) {
-      delay(5);
-      if (digitalRead(FS_STOP) == LOW) {
+    } else if (finger_switch_button_stop_current == LOW) {
+      if (finger_switch_button_stop_old == HIGH) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_STOP);
       }
     }
@@ -220,7 +233,59 @@ void task_finger_switch(void) {
 
 // Task Perc Stim
 void task_perc_stim(void) {
-  RunPercStimOnce(finger_switch_output, STEP_DURATION_DEFAULT);
+
+  int8_t gait_type = finger_switch_output;
+
+  uint8_t pulse_width_i = 0;
+  uint8_t amplitude_i = 0;
+
+  size_t gait_cycle_step[NUM_CHANNELS];
+  size_t gait_cycle_next_step[NUM_CHANNELS];
+
+
+  uint8_t gait_finished_count = 0;
+
+  float current_gait_time = 0.0;
+  float next_event_time = 0.0;
+
+  switch (gait_type) {
+    case FSSM_RESULT_NO_STIM:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("NO_STIM"); 
+      #endif
+
+    break;
+
+    case FSSM_RESULT_EXE_STAND:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_STAND"); 
+      #endif
+
+    break;
+
+    case FSSM_RESULT_EXE_LSTEP:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_LSTEP"); 
+      #endif
+
+    break;
+
+    case FSSM_RESULT_EXE_RSTEP:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_RSTEP"); 
+      #endif
+
+    break;
+
+    case FSSM_RESULT_EXE_SIT:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_SIT"); 
+      #endif
+
+    break; 
+  }
+
+  //delay(30);
 }
 
 /// --------------------------
@@ -287,57 +352,6 @@ int8_t DemoRunSweep4CH(unsigned long delay_ms) {
   return 1;
 }
 
-// Timer driven stim timing output
-int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
-
-  uint8_t pulse_width_i = 0;
-  uint8_t amplitude_i = 0;
-
-  size_t gait_cycle_step[NUM_CHANNELS];
-  size_t gait_cycle_next_step[NUM_CHANNELS];
-
-
-  uint8_t gait_finished_count = 0;
-
-  float current_gait_time = 0.0;
-  float next_event_time = 0.0;
-
-  switch (gait_type) {
-    case FSSM_RESULT_NO_STIM:
-      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
-         Serial.print("[GAIT]"); Serial.println("NO_STIM"); 
-      #endif
-
-    break;
-
-    case FSSM_RESULT_EXE_LSTEP:
-      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
-         Serial.print("[GAIT]"); Serial.println("EXE_LSTEP"); 
-      #endif
-
-    break;
-
-    case FSSM_RESULT_EXE_RSTEP:
-      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
-         Serial.print("[GAIT]"); Serial.println("EXE_RSTEP"); 
-      #endif
-
-    break;
-
-    case FSSM_RESULT_EXE_SIT:
-      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
-         Serial.print("[GAIT]"); Serial.println("EXE_SIT"); 
-      #endif
-
-    break; 
-  }
-
-  delay(20);
-
-  return 1;  
-}
-
-
 int8_t FingerSwitchStatesMachine(int8_t * current_state, int8_t trigger_event) {
   // states machine
   switch (*current_state) {
@@ -348,7 +362,8 @@ int8_t FingerSwitchStatesMachine(int8_t * current_state, int8_t trigger_event) {
       } else if(trigger_event == FSSM_EVENT_NONE) {
         return FSSM_RESULT_NONE; // do noting
       } else {
-        return FSSM_RESULT_NULL; // return null
+        return FSSM_RESULT_NONE; // do nothing
+        //return FSSM_RESULT_NULL; // return null
       }
     break;
 
