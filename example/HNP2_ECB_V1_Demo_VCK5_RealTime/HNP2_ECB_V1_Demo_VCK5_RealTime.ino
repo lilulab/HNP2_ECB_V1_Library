@@ -14,8 +14,9 @@
 
 #define DEBUG_ON 1 //Comment this out if want to disenable all debug serial printing.
 #define DEBUG_GAIT 1  //Comment this out if want to disenable gait info debug.
-//#define DEBUG_TIMER 1 //Comment this out if want to disenable timer debug.
+// #define DEBUG_TIMER 1 //Comment this out if want to disenable timer debug.
 #define DEBUG_FSSM 1  //Comment this out if want to disenable finger switch debug.
+// #define DEBUG_SYS 1
 
 
 // Create object ECB
@@ -104,6 +105,10 @@ static const uint16_t TIMER_MS_MAX = 1000;
 // uint16_t timer1_min_counter = 0;
 uint16_t timer1_sec_counter = 0;
 uint16_t timer1_ms_counter = 0;
+uint16_t system_100hz_counter = 0;
+# define OS_RATE_HZ 100
+
+
 
 
 void setup() {
@@ -122,9 +127,10 @@ void setup() {
 
   Serial.begin(115200);
 
-  Timer1.initialize(1000); // set a timer of length 1000 microseconds (or 0.001 sec - or 1kHz)
+  // Timer1.initialize(1000); // set a timer of length 1000 microseconds (or 0.001 sec - or 1kHz)
+  Timer1.initialize(10000); // set a timer of length 10 miliseconds (or 0.01 sec - or 1kHz)
   Timer1.attachInterrupt( timerOneIsr ); // attach the service routine here
-
+  Timer1.stop();
 }
 
 void loop() {
@@ -145,28 +151,76 @@ void loop() {
   // // End - Sweep 4 channels.
 
   ECB.io_set(LED_GREEN, LED_OFF);
-  ECB.io_set(LED_RED, LED_OFF);
+  ECB.io_set(LED_RED, LED_ON);
 
-  while(1){
+  delay(1000);
+  timerOneRestart();
+
+    ECB.io_set(LED_RED, LED_OFF);
+
+  uint16_t system_100hz_counter_current = 0;
+  uint16_t system_100hz_counter_old = 0;
+
+  while(1) {
+
+    system_100hz_counter_old = system_100hz_counter_current;
+    system_100hz_counter_current = system_100hz_counter;
+
+    #if defined(DEBUG_SYS) && defined(DEBUG_ON)
+      Serial.print("system_100hz_counter_old: ");
+      Serial.print(system_100hz_counter_old);
+      Serial.print("\t");
+      Serial.print("system_100hz_counter_current: ");
+      Serial.println(system_100hz_counter_current);
+    #endif
+
+    // check if system update
+    if (system_100hz_counter_old != system_100hz_counter_current) {
+      // 1Hz tasks
+      if (system_100hz_counter_current % (OS_RATE_HZ/1) == 0) {
+        ECB.io_toggle(LED_GREEN);
+      } //end 1Hz tasks
+
+      // 10Hz tasks
+      if (system_100hz_counter_current % (OS_RATE_HZ/10) == 0) {
+        task_finger_switch();
+      } //end 10Hz tasks
+
+      // 30Hz tasks
+      if (system_100hz_counter_current % (OS_RATE_HZ/30) == 0) {
+        task_perc_stim();
+      } //end 30Hz tasks
+
+      // 100Hz tasks
+      // Just put code in here.
+      // ECB.io_toggle(LED_RED);
+
+    } //end check if system update
+  } // end while(1)
+} //end main loop
+
+
+// Task finger switch
+void task_finger_switch(void) {
+
     if (digitalRead(FS_GO) == LOW) {
-      delay(10);
+      delay(5);
       if (digitalRead(FS_GO) == LOW) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_GO);
-        RunPercStimOnce(finger_switch_output, STEP_DURATION_DEFAULT);
-        // RunPercStimOnce(finger_switch_output, 2000);
+        //RunPercStimOnce(finger_switch_output, STEP_DURATION_DEFAULT);
       }
     } else if (digitalRead(FS_STOP) == LOW) {
-      delay(10);
+      delay(5);
       if (digitalRead(FS_STOP) == LOW) {
         finger_switch_output = FSSM_run_once(FSSM_EVENT_PRESS_STOP);
       }
     }
     FSSM_print();
-    
-  }
+}
 
-
-
+// Task Perc Stim
+void task_perc_stim(void) {
+  RunPercStimOnce(finger_switch_output, STEP_DURATION_DEFAULT);
 }
 
 /// --------------------------
@@ -174,27 +228,33 @@ void loop() {
 /// --------------------------
 void timerOneIsr()
 {
-    timer1_ms_counter++; // increment millisec counter
-    if (timer1_ms_counter >= TIMER_MS_MAX) {
-      timer1_ms_counter = 0; // reset
+  system_100hz_counter++; // SYSTEM counter +1
+  timer1_ms_counter+=10; // increment millisec counter
 
-      timer1_sec_counter ++; // increment second counter
-      if (timer1_sec_counter >= TIMER_SEC_MAX) {
-        timer1_sec_counter = 0; // reset
-        // Increment miniutes counter 
-      }
+  if (timer1_ms_counter >= TIMER_MS_MAX) {
+    timer1_ms_counter = 0; // reset
 
+    timer1_sec_counter ++; // increment second counter
+    if (timer1_sec_counter >= TIMER_SEC_MAX) {
+      timer1_sec_counter = 0; // reset
+      // Increment miniutes counter 
     }
 
-    #if defined(DEBUG_TIMER) && defined(DEBUG_ON)
-      // Toggle LED
-      //ECB.io_toggle(LED_GREEN);
+  }
 
-      Serial.print(timer1_sec_counter);
-      Serial.print("s\t");
-      Serial.print(timer1_ms_counter);
-      Serial.println("ms\t");
-    #endif
+  #if defined(DEBUG_TIMER) && defined(DEBUG_ON)
+    // Toggle LED
+    //ECB.io_toggle(LED_GREEN);
+    Serial.print("Timer ISR: system_100hz_counter[");
+    Serial.print(system_100hz_counter);
+    Serial.print("]\t");
+    
+    Serial.print(timer1_sec_counter);
+    Serial.print("s\t");
+
+    Serial.print(timer1_ms_counter);
+    Serial.println("ms\t");
+  #endif
 }
 
 void timerOneClear (void) {
@@ -242,27 +302,38 @@ int8_t RunPercStimOnce(int8_t gait_type, float gait_duration) {
   float current_gait_time = 0.0;
   float next_event_time = 0.0;
 
-      switch (gait_type) {
-        case FSSM_RESULT_NO_STIM:
+  switch (gait_type) {
+    case FSSM_RESULT_NO_STIM:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("NO_STIM"); 
+      #endif
 
-        break;
+    break;
 
-        case FSSM_RESULT_EXE_LSTEP:
+    case FSSM_RESULT_EXE_LSTEP:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_LSTEP"); 
+      #endif
 
-        break;
+    break;
 
-        case FSSM_RESULT_EXE_RSTEP:
+    case FSSM_RESULT_EXE_RSTEP:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_RSTEP"); 
+      #endif
 
-        break;
+    break;
 
-        case FSSM_RESULT_EXE_SIT:
+    case FSSM_RESULT_EXE_SIT:
+      #if defined(DEBUG_GAIT) && defined(DEBUG_ON)
+         Serial.print("[GAIT]"); Serial.println("EXE_SIT"); 
+      #endif
 
-        break; 
-      }
-        
-      //Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width_i, amplitude_i, 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
-      //delay(10);
-     
+    break; 
+  }
+
+  delay(20);
+
   return 1;  
 }
 
@@ -300,8 +371,8 @@ int8_t FingerSwitchStatesMachine(int8_t * current_state, int8_t trigger_event) {
         *current_state = FSSM_STATE_RSETP; // if press go, then exe Rstep.
         return FSSM_RESULT_EXE_RSTEP;
       } else if(trigger_event == FSSM_EVENT_PRESS_STOP) {
-        *current_state = FSSM_STATE_SIT;  // if press stop, then exe sit.
-        return FSSM_RESULT_EXE_SIT;
+        *current_state = FSSM_STATE_STAND;  // if press stop, then exe sit.
+        return FSSM_RESULT_EXE_STAND;
       } else if(trigger_event == FSSM_EVENT_NONE) {
         return FSSM_RESULT_NONE; // do noting
       } else {
@@ -314,8 +385,8 @@ int8_t FingerSwitchStatesMachine(int8_t * current_state, int8_t trigger_event) {
         *current_state = FSSM_STATE_LSETP; // if press go, then exe Lstep.
         return FSSM_RESULT_EXE_LSTEP;
       } else if(trigger_event == FSSM_EVENT_PRESS_STOP) {
-        *current_state = FSSM_STATE_SIT;  // if press stop, then exe sit.
-        return FSSM_RESULT_EXE_SIT;
+        *current_state = FSSM_STATE_STAND;  // if press stop, then exe sit.
+        return FSSM_RESULT_EXE_STAND;
       } else if(trigger_event == FSSM_EVENT_NONE) {
         return FSSM_RESULT_NONE; // do noting
       } else {
@@ -357,7 +428,7 @@ int8_t FSSM_run_once(int8_t test_event) {
   int8_t result;
 
   result = FingerSwitchStatesMachine(&finger_switch_state, test_event);
-  FSSM_led_tester(result);
+  //FSSM_led_tester(result);
 
   //delay(500);
   return result;
@@ -365,6 +436,8 @@ int8_t FSSM_run_once(int8_t test_event) {
 
 void FSSM_print(void) {
   #if defined(DEBUG_FSSM) && defined(DEBUG_ON)
+
+    Serial.print("[FSSM]");
     Serial.print("FSSM_state= ");
     Serial.print(finger_switch_state);
     Serial.print(", FSSM_event= ");
