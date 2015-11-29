@@ -22,9 +22,12 @@
 // Create object ECB
 NTREK ECB(Board_ID_A101);
 
-// Create object Stim_Perc_Brd0
-Stim Stim_Perc_Brd0(STIM_CHANNEL_UART1);
-// Stim Stim_Perc_Brd0(STIM_CHANNEL_UART3); 
+// Stim board 1 @ UART1
+Stim stimBrd1(STIM_CHANNEL_UART1);
+// Stim stimBrd1(STIM_CHANNEL_UART0); //only use for USB-UART debugging.
+
+// Stim board 2 @ UART3
+Stim stimBrd2(STIM_CHANNEL_UART3);
 
 // main loop counter
 int32_t counter_main_loop = 0;
@@ -125,13 +128,20 @@ void setup() {
   ECB.io_set(IO_3V_EN1, LOW);
   ECB.io_set(IO_3V_EN2, LOW);
 
-  // Setup CwruStim library
-  // setupCwruStim(); // One function setup everyting to replace three lines below.
-  Stim_Perc_Brd0.init(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Initialize the Stim board and delete old schedule
-  Stim_Perc_Brd0.config(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Setup channels, schedule, and events
-  Stim_Perc_Brd0.start(UECU_SYNC_MSG);
-
+  // Start Serial0 for debug and BT comm.
   Serial.begin(115200);
+
+  // Setup CwruStim library
+  // Board 1 setup
+  stimBrd1.init(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Initialize the Stim board and delete old schedule
+  stimBrd1.config(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Setup channels, schedule, and events
+  stimBrd1.start(UECU_SYNC_MSG);
+
+  // Board 2 setup
+  stimBrd2.init(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Initialize the Stim board and delete old schedule
+  stimBrd2.config(STIM_MODE_PERC_8CH_MULTI_SCHEDULE); // Setup channels, schedule, and events
+  stimBrd2.start(UECU_SYNC_MSG);
+
 
   // Timer1.initialize(1000); // set a timer of length 1000 microseconds (or 0.001 sec - or 1kHz)
   Timer1.initialize(10000); // set a timer of length 10 miliseconds (or 0.01 sec - or 1kHz)
@@ -149,7 +159,7 @@ void loop() {
   //ECB.io_toggle(LED_RED);
 
   // Change Event Params on the fly.
-  //Stim_Perc_Brd0.cmd_set_evnt(event_id, pulse_width, amplitude, zone);
+  //stimBrd1.cmd_set_evnt(event_id, pulse_width, amplitude, zone);
 
   // // Comment out between Start-End to disable this code block.
   // // Start - Sweep 4 channels.
@@ -346,7 +356,7 @@ int8_t SweepValUpdate(int8_t val, int8_t dir, int8_t min, int8_t max) {
 int8_t DemoRunSweep4CH(unsigned long delay_ms) {
   for (uint8_t i=0; i<4; i++) {
     pulse_width[i] = (uint8_t)SweepValUpdate((uint8_t)pulse_width[i], pw_dir[i], pw_min, pw_max); // update the Pulse width value
-    Stim_Perc_Brd0.cmd_set_evnt(i+1, pulse_width[i], amplitude[i], 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
+    stimBrd1.cmd_set_evnt(i+1, pulse_width[i], amplitude[i], 0); // Change Event 4 for port_chn_id 3 in sched_id 1  
     delay(delay_ms); // delay ms
   }
   return 1;
