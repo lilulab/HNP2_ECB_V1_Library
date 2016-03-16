@@ -1,0 +1,38 @@
+#######################################
+# Syntax Coloring Map for NTREK
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+NTREK	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+setup KEYWORD2
+io_set  KEYWORD2
+io_toggle	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+LED_ON  LITERAL1
+LED_OFF	LITERAL1
+
+#######################################
+# Macros (LITERAL2)
+#######################################
+
+NOP LITERAL2
+
+#######################################
+# Variables (LITERAL2)
+#######################################
+
+_board_id LITERAL2
+_setup_mode LITERAL2
+_io_state LITERAL2
