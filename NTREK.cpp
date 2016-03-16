@@ -129,7 +129,7 @@ int NTREK::imu_turn_off(void) {
   return 1;
 }
 
-int NTREK::imu_update(char* src, int mode) {
+int NTREK::imu_update(int mode) {
 
   switch (mode) {
     case  IMU_MODE_FLTR_KF_BIN:
@@ -137,7 +137,7 @@ int NTREK::imu_update(char* src, int mode) {
       Serial2.write((int) IMU_MODE_FLTR_KF_BIN);
 
       if(Serial2.available()) {
-        Serial2.readBytes(src, IMU_KF_DATA_BUFFER_LENGTH);
+        Serial2.readBytes((char*)&imu_data_kf, IMU_KF_DATA_BUFFER_LENGTH);
       }
 
       break;

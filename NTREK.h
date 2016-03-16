@@ -37,8 +37,11 @@ class NTREK
     bool io_toggle(int io_pin);
     int imu_init(void);
     int imu_turn_off(void);
-    int imu_update(char* src, int mode);
+    int imu_update(int mode);
     uint8_t imu_data_kf[IMU_KF_DATA_BUFFER_LENGTH];
+    uint16_t imu_kf_roll;
+    uint16_t imu_kf_pitch;
+    uint16_t imu_kf_yaw;
 
   private:
     static int _board_id;

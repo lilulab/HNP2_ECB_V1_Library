@@ -17,7 +17,7 @@ void loop() {
   //NTREK.io_toggle(LED_RED);
 
   // read imu subsystem data
-  NTREK.imu_update((char*)&NTREK.imu_data_kf, IMU_MODE_FLTR_KF_BIN);
+  NTREK.imu_update(IMU_MODE_FLTR_KF_BIN);
 
   // print out to debug port
   //readable strings.
