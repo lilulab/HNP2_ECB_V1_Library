@@ -35,13 +35,19 @@ class NTREK
   	int setup(int setup_mode);
   	void io_set(int io_pin, int io_val);
     bool io_toggle(int io_pin);
-    int imu_init(void);
+    int imu_init(int mode);
     int imu_turn_off(void);
     int imu_update(int mode);
+    int imu_calibration(int mode);
+    
     uint8_t imu_data_kf[IMU_KF_DATA_BUFFER_LENGTH];
-    uint16_t imu_kf_roll;
-    uint16_t imu_kf_pitch;
-    uint16_t imu_kf_yaw;
+    int16_t imu_kf_roll;
+    int16_t imu_kf_pitch;
+    int16_t imu_kf_yaw;
+
+    int16_t imu_kf_roll_offset;
+    int16_t imu_kf_pitch_offset;
+    int16_t imu_kf_yaw_offset;
 
   private:
     static int _board_id;

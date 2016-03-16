@@ -114,11 +114,17 @@ bool NTREK::io_toggle(int io_pin) {
   return _io_state[io_pin];
 }
 
-int NTREK::imu_init(void) {
+int NTREK::imu_init(int mode) {
   // turn on power to IMU-X subsystem
   this->io_set(POW_EN_IMU, HIGH);
 
   // calibrate sensor if needed
+  imu_kf_roll_offset = 0;
+  imu_kf_pitch_offset = 0;
+  imu_kf_yaw_offset = 0;
+
+  this->imu_calibration(mode);
+
   return 1;
 }
 
@@ -136,10 +142,44 @@ int NTREK::imu_update(int mode) {
       //Kalman Filtered
       Serial2.write((int) IMU_MODE_FLTR_KF_BIN);
 
+      // check incoming
       if(Serial2.available()) {
+        // read data from UART2
         Serial2.readBytes((char*)&imu_data_kf, IMU_KF_DATA_BUFFER_LENGTH);
+
+        // process the date
+        imu_kf_roll = (int16_t)imu_data_kf[3]*255 + (int16_t)imu_data_kf[4] - imu_kf_roll_offset;
+        imu_kf_pitch = (int16_t)imu_data_kf[5]*255 + (int16_t)imu_data_kf[6] - imu_kf_pitch_offset;
+        //imu_kf_yaw;
       }
 
+      break;
+
+    default:
+      // TODO
+      // Error handling
+      return -1;
+      break;
+  }
+
+  return 1;
+}
+
+int NTREK::imu_calibration(int mode) {
+
+  imu_kf_roll_offset = 0;
+  imu_kf_pitch_offset = 0;
+  //get data update
+  this->imu_update(mode);
+
+  // TODO
+  // multi sample to filtering the offset
+
+  switch (mode) {
+    case  IMU_MODE_FLTR_KF_BIN:
+      // use current value as offset.
+      imu_kf_roll_offset = imu_kf_roll;
+      imu_kf_pitch_offset = imu_kf_pitch;
       break;
 
     default:
