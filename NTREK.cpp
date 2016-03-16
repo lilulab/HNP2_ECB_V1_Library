@@ -28,8 +28,8 @@ int NTREK::setup(int setup_mode) {
   // Just in case need to reflash the IC.
   // This is critical since, 
   // USB-UART shares the same port with Bluetooth.
-  this->io_set(IO_3V_EN1, LOW);
-  this->io_set(IO_3V_EN2, LOW);
+  this->io_set(POW_EN_BT, LOW);
+  this->io_set(POW_EN_IMU, LOW);
   // digitalWrite(IO_3V_EN1, LOW);
   // digitalWrite(IO_3V_EN2, LOW);
 
@@ -85,6 +85,15 @@ int NTREK::setup(int setup_mode) {
   // Turn on Green LED
   this->io_set(LED_GREEN, LED_ON);  
 
+  // Serial UART ports
+  Serial.begin(115200); // Bluetooth and USB
+
+  Serial2.begin(115200); // IMU-X subsystem
+
+  // Serial1.begin(9600);  // Stim Channel
+  // Serial3.begin(9600);  // Stim Channel
+
+
   // Save setup mode
 	_setup_mode = setup_mode;
 
@@ -103,4 +112,42 @@ bool NTREK::io_toggle(int io_pin) {
   digitalWrite(io_pin,_io_state[io_pin]);
 
   return _io_state[io_pin];
+}
+
+int NTREK::imu_init(void) {
+  // turn on power to IMU-X subsystem
+  this->io_set(POW_EN_IMU, HIGH);
+
+  // calibrate sensor if needed
+  return 1;
+}
+
+int NTREK::imu_turn_off(void) {
+  // turn off power to IMU-X subsystem
+  this->io_set(POW_EN_IMU, HIGH);
+
+  return 1;
+}
+
+int NTREK::imu_update(char* src, int mode) {
+
+  switch (mode) {
+    case  IMU_MODE_FLTR_KF_BIN:
+      //Kalman Filtered
+      Serial2.write((int) IMU_MODE_FLTR_KF_BIN);
+
+      if(Serial2.available()) {
+        Serial2.readBytes(src, IMU_KF_DATA_BUFFER_LENGTH);
+      }
+
+      break;
+
+    default:
+      // TODO
+      // Error handling
+      return -1;
+      break;
+  }
+
+  return 1;
 }

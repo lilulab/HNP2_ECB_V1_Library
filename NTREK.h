@@ -35,10 +35,16 @@ class NTREK
   	int setup(int setup_mode);
   	void io_set(int io_pin, int io_val);
     bool io_toggle(int io_pin);
+    int imu_init(void);
+    int imu_turn_off(void);
+    int imu_update(char* src, int mode);
+    uint8_t imu_data_kf[IMU_KF_DATA_BUFFER_LENGTH];
+
   private:
     static int _board_id;
     static int _setup_mode;
     static bool _io_state[54];
+
 };
 
 #endif
