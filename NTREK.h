@@ -12,8 +12,8 @@
 
 #include "Arduino.h"
 //#include <TimerOne.h>
-#include "hardware/Board_ECB.h"
-#include "hardware/Board_SCB.h"
+#include "include/Board_ECB.h"
+#include "include/Board_SCB.h"
 
 #define NOP __asm__ __volatile__ ("nop\n\t")
 #define LED_ON LOW

@@ -155,6 +155,10 @@ int NTREK::imu_update(int mode) {
 
       break;
 
+    // For AHRS 9-Axis fusion firmware.
+    case 0xA0:
+      break;
+
     default:
       // TODO
       // Error handling
