@@ -1,6 +1,6 @@
 //#include <TimerOne.h>
 
-#include "NTREK.h"
+#include <NTREK.h>
 
 NTREK NTREK(Board_ID_A101);
 
