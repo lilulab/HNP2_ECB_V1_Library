@@ -17,18 +17,24 @@ void loop() {
   //NTREK.io_toggle(LED_RED);
 
   // read imu subsystem data
-  NTREK.imu_update(IMU_MODE_FLTR_KF_BIN);
+  NTREK.imu_update(IMU_MODE_9AXIS_FUSION);
+  delay(50);
 
-  if(Serial.available()) {
-    // if send command string 'C' via Serial Monitor
-    if (Serial.read() == 'C') {
-      // Run Kalman Filter calibration.
-      NTREK.imu_calibration(IMU_MODE_FLTR_KF_BIN); 
-    }
-  }
+  // if(Serial.available()) {
+  //   // if send command string 'C' via Serial Monitor
+  //   if (Serial.read() == 'C') {
+  //     // Run Kalman Filter calibration.
+  //     NTREK.imu_calibration(IMU_MODE_FLTR_KF_BIN); 
+  //   }
+  // }
+
+  int inQueue = Serial2.availableForWrite();
+  Serial.print(inQueue);
+  Serial.print("\t");
+
 
   // print out the data via Serial Monitor
-  //debug_serial_monitor();
+  // debug_serial_monitor();
 
   // Use Arduino Serial Plotter
   debug_serial_plotter();
@@ -37,15 +43,43 @@ void loop() {
 
 
 void debug_serial_plotter(void) {
-  Serial.print(NTREK.imu_kf_roll);
-  Serial.print("\t");
-  Serial.println(NTREK.imu_kf_pitch);
+  // Serial.print(NTREK.imu_kf_roll);
+  // Serial.print("\t");
+  // Serial.println(NTREK.imu_kf_pitch);
+
+  for (int i=0; i<4; i++) {
+    Serial.print(NTREK.imu_quaternion[i]);
+    Serial.print("\t");
+  }
+  Serial.println(" ");
 }
 
 void debug_serial_monitor(void) {
   // print out to debug port
   //readable strings.
-  Serial.print("IMU: "); 
+  Serial.print("IMU message = "); 
+
+
+  for (int i=0; i<IMU_MODE_9AXIS_FUSION_DATA_LENGTH; i++) {
+    Serial.print(NTREK.imu_quaternion_msg[i]);
+    Serial.print("\t");
+  }
+
+  Serial.print("checksum:");
+  uint8_t checkSumByte = NTREK.checksum(NTREK.imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH-1);
+  Serial.print(checkSumByte);
+
+  Serial.println(" ");
+  
+
+  Serial.print("IMU quaternion = ");
+  for (int i=0; i<4; i++) {
+    Serial.print(NTREK.imu_quaternion[i]);
+    Serial.print("\t");
+  }
+  Serial.println(" ");
+
+
 
   // print raw data buffer
   // for (int i=0; i<IMU_KF_DATA_BUFFER_LENGTH; i++) {
@@ -54,18 +88,18 @@ void debug_serial_monitor(void) {
   // }
 
   // roll angle (in degree*100)
-  Serial.print(" kf_roll = ");
-  Serial.print(NTREK.imu_kf_roll);
-  Serial.print("(int) / ");
-  Serial.print((float)NTREK.imu_kf_roll/100);
-  Serial.print("(deg);\t");
+  // Serial.print(" kf_roll = ");
+  // Serial.print(NTREK.imu_kf_roll);
+  // Serial.print("(int) / ");
+  // Serial.print((float)NTREK.imu_kf_roll/100);
+  // Serial.print("(deg);\t");
 
-  // pitch angle (in degree*100)
-  Serial.print(" kf_pitch = ");
-  Serial.print(NTREK.imu_kf_pitch);
-  Serial.print("(int) / ");
-  Serial.print((float)NTREK.imu_kf_pitch/100);
-  Serial.print("(deg);\t");
+  // // pitch angle (in degree*100)
+  // Serial.print(" kf_pitch = ");
+  // Serial.print(NTREK.imu_kf_pitch);
+  // Serial.print("(int) / ");
+  // Serial.print((float)NTREK.imu_kf_pitch/100);
+  // Serial.print("(deg);\t");
 
 
   // // roll offset (in degree*100)
@@ -80,3 +114,5 @@ void debug_serial_monitor(void) {
 
   Serial.println("");
 }
+
+

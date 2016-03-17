@@ -123,7 +123,11 @@ int NTREK::imu_init(int mode) {
   imu_kf_pitch_offset = 0;
   imu_kf_yaw_offset = 0;
 
-  this->imu_calibration(mode);
+  for (int i=0; i<4; i++) {
+    imu_quaternion[i] = -1;
+  } // end for i
+
+  // this->imu_calibration(mode);
 
   return 1;
 }
@@ -156,7 +160,38 @@ int NTREK::imu_update(int mode) {
       break;
 
     // For AHRS 9-Axis fusion firmware.
-    case 0xA0:
+    case IMU_MODE_9AXIS_FUSION:
+      //AHRS 9-Axis fusion
+
+      if (Serial2.availableForWrite()>=60) {
+        Serial2.write((int) IMU_MODE_9AXIS_FUSION);
+      }
+
+      // check incoming
+      if(Serial2.available()) {
+
+        // read data from UART2
+        Serial2.readBytes((char*)&imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH);
+
+        // calculate checksum byte
+        uint8_t checkSumByte = this->checksum(imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH-1);
+
+        // only if checksum is correct
+        if (checkSumByte == imu_quaternion_msg[IMU_MODE_9AXIS_FUSION_DATA_LENGTH-1]) {
+          // unpack the quaternion data from message
+          for (int i=0; i<4; i++) {
+            imu_quaternion[i] = ( ( (int16_t)imu_quaternion_msg[i*2+1] << 8 ) & 0xFF00 ) | ((int16_t)imu_quaternion_msg[i*2+2] & 0x00FF );
+          } // end for i
+        } else { // check sum not meet
+          // TODO : error handle
+          for (int i=0; i<4; i++) {
+            imu_quaternion[i] = -1;
+          } // end for i
+        } // end if checksum
+
+
+      } // end if Serial 2
+
       break;
 
     default:
@@ -195,3 +230,14 @@ int NTREK::imu_calibration(int mode) {
 
   return 1;
 }
+
+uint8_t NTREK::checksum(uint8_t vals[], int length){
+  uint16_t csum = 0;
+  for(int i=0; i<length-1; i++) {
+    csum += (uint16_t)vals[i];
+  }
+  csum = ((0x00FF & csum) + (csum >> 8))^0xFF;
+  return (uint8_t)csum;
+} 
+
+

@@ -14,6 +14,7 @@
 //#include <TimerOne.h>
 #include "include/Board_ECB.h"
 #include "include/Board_SCB.h"
+#include "include/IMU_Subsystem.h"
 
 #define NOP __asm__ __volatile__ ("nop\n\t")
 #define LED_ON LOW
@@ -39,6 +40,7 @@ class NTREK
     int imu_turn_off(void);
     int imu_update(int mode);
     int imu_calibration(int mode);
+    uint8_t checksum(uint8_t vals[], int length);
     
     uint8_t imu_data_kf[IMU_KF_DATA_BUFFER_LENGTH];
     int16_t imu_kf_roll;
@@ -48,6 +50,9 @@ class NTREK
     int16_t imu_kf_roll_offset;
     int16_t imu_kf_pitch_offset;
     int16_t imu_kf_yaw_offset;
+
+    uint8_t imu_quaternion_msg[IMU_MODE_9AXIS_FUSION_DATA_LENGTH];
+    int16_t imu_quaternion[4];
 
   private:
     static int _board_id;
