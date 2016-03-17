@@ -28,12 +28,21 @@ void loop() {
   }
 
   // print out the data via Serial Monitor
-  debug_print();
+  //debug_serial_monitor();
 
+  // Use Arduino Serial Plotter
+  debug_serial_plotter();
   //delay(10);
 }
 
-void debug_print(void) {
+
+void debug_serial_plotter(void) {
+  Serial.print(NTREK.imu_kf_roll);
+  Serial.print("\t");
+  Serial.println(NTREK.imu_kf_pitch);
+}
+
+void debug_serial_monitor(void) {
   // print out to debug port
   //readable strings.
   Serial.print("IMU: "); 
