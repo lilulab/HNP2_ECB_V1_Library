@@ -9,6 +9,8 @@ void setup() {
   // Kick start the IMU-X subsystem
   NTREK.imu_init(IMU_MODE_FLTR_KF_BIN);
 
+  // turn on Bluetooth module
+  //NTREK.bluetooth_start();
 }
 
 void loop() {
@@ -16,9 +18,11 @@ void loop() {
   NTREK.io_toggle(LED_GREEN);
   //NTREK.io_toggle(LED_RED);
 
+  //NTREK.bluetooth_echo();
+
   // read imu subsystem data
   NTREK.imu_update(IMU_MODE_9AXIS_FUSION);
-  delay(50);
+  delay(5);
 
   // if(Serial.available()) {
   //   // if send command string 'C' via Serial Monitor
@@ -28,9 +32,9 @@ void loop() {
   //   }
   // }
 
-  int inQueue = Serial2.availableForWrite();
-  Serial.print(inQueue);
-  Serial.print("\t");
+  // int inQueue = Serial2.availableForWrite();
+  // Serial.print(inQueue);
+  // Serial.print("\t");
 
 
   // print out the data via Serial Monitor
@@ -66,7 +70,7 @@ void debug_serial_monitor(void) {
   }
 
   Serial.print("checksum:");
-  uint8_t checkSumByte = NTREK.checksum(NTREK.imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH-1);
+  uint8_t checkSumByte = NTREK.checksum(NTREK.imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH-2);
   Serial.print(checkSumByte);
 
   Serial.println(" ");

@@ -22,14 +22,16 @@ static const int IO_TXD2 = 17;
 static const int IO_SCK = 52;
 static const int IO_MOSI = 51;
 static const int IO_MISO = 50;
+
+static const int IO_BT_AT = 38;
 static const int IO_IMU_INT = 53;
 static const int IO_BUZZER = 44;
 
 static const int IO_3V_EN1 = 42;
 static const int IO_3V_EN2 = 43;
 
-#define POW_EN_BT IO_3V_EN1
-#define POW_EN_IMU IO_3V_EN2
+#define POW_EN_BT IO_3V_EN2
+#define POW_EN_IMU IO_3V_EN1
 
 static const int IO_TXD1 = 18;
 static const int IO_RXD1 = 19;

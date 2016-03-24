@@ -4,7 +4,7 @@
 // For IMU-X subsystem
 
 
-static const int  IMU_MODE_9AXIS_FUSION_DATA_LENGTH  =  10;
+static const int  IMU_MODE_9AXIS_FUSION_DATA_LENGTH  =  15;
 static const int  IMU_MODE_9AXIS_FUSION  =  0xA0;
 
 static const int  IMU_MODE_RAW_STR       =  0xA1;

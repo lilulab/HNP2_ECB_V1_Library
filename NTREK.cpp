@@ -28,10 +28,10 @@ int NTREK::setup(int setup_mode) {
   // Just in case need to reflash the IC.
   // This is critical since, 
   // USB-UART shares the same port with Bluetooth.
-  this->io_set(POW_EN_BT, LOW);
-  this->io_set(POW_EN_IMU, LOW);
-  // digitalWrite(IO_3V_EN1, LOW);
-  // digitalWrite(IO_3V_EN2, LOW);
+  //this->io_set(POW_EN_BT, LOW);
+  //this->io_set(POW_EN_IMU, LOW);
+   digitalWrite(IO_3V_EN1, LOW);
+   digitalWrite(IO_3V_EN2, LOW);
 
   // LED on board
   pinMode(LED_RED, OUTPUT);
@@ -81,6 +81,9 @@ int NTREK::setup(int setup_mode) {
   
   // ADC ref source
   analogReference(EXTERNAL);// (DEFAULT, INTERNAL, INTERNAL1V1, INTERNAL2V56, or EXTERNAL)
+
+  pinMode(IO_IMU_INT, OUTPUT);
+  digitalWrite(IO_IMU_INT, HIGH);
   
   // Turn on Green LED
   this->io_set(LED_GREEN, LED_ON);  
@@ -134,7 +137,7 @@ int NTREK::imu_init(int mode) {
 
 int NTREK::imu_turn_off(void) {
   // turn off power to IMU-X subsystem
-  this->io_set(POW_EN_IMU, HIGH);
+  this->io_set(POW_EN_IMU, LOW);
 
   return 1;
 }
@@ -163,34 +166,73 @@ int NTREK::imu_update(int mode) {
     case IMU_MODE_9AXIS_FUSION:
       //AHRS 9-Axis fusion
 
-      if (Serial2.availableForWrite()>=60) {
-        Serial2.write((int) IMU_MODE_9AXIS_FUSION);
+      // if (Serial2.availableForWrite()>=60) {
+      //   Serial2.write((int) IMU_MODE_9AXIS_FUSION);
+      // }
+
+      // On command to IMU INT pin
+      Serial2.flush();
+      this->io_set(IO_IMU_INT, LOW);
+      //delay(1);
+
+      while(Serial2.available() <= 0) {
+        //delay(1);
       }
 
-      // check incoming
-      if(Serial2.available()) {
+      this->io_set(IO_IMU_INT, HIGH);
 
+      // check incoming
+      while(Serial2.available() > 0) {
+
+        //Serial2.flush();
         // read data from UART2
-        Serial2.readBytes((char*)&imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH);
+        //Serial2.readBytes((char*)&imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH);
+        Serial2.readBytesUntil(0xAA,(char*)&imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH);
 
         // calculate checksum byte
-        uint8_t checkSumByte = this->checksum(imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH-1);
+        uint8_t checkSumByte = this->checksum(imu_quaternion_msg, IMU_MODE_9AXIS_FUSION_DATA_LENGTH-2);
+
+        // DEBUG : Print all bytes in the incoming msg
+        // for (int i=0; i<IMU_MODE_9AXIS_FUSION_DATA_LENGTH; i++) {
+        //   Serial.print(imu_quaternion_msg[i],HEX);
+        //   Serial.print('\t');
+        // }
+        //Serial.print("checksum = ");
+        //Serial.print(checkSumByte,HEX);
+
+        //Serial.println(" ");
 
         // only if checksum is correct
-        if (checkSumByte == imu_quaternion_msg[IMU_MODE_9AXIS_FUSION_DATA_LENGTH-1]) {
+        if (checkSumByte == imu_quaternion_msg[IMU_MODE_9AXIS_FUSION_DATA_LENGTH-2]) {
           // unpack the quaternion data from message
           for (int i=0; i<4; i++) {
-            imu_quaternion[i] = ( ( (int16_t)imu_quaternion_msg[i*2+1] << 8 ) & 0xFF00 ) | ((int16_t)imu_quaternion_msg[i*2+2] & 0x00FF );
+            imu_quaternion[i] = ( ( (int16_t)imu_quaternion_msg[i*2+5] << 8 ) & 0xFF00 ) | ((int16_t)imu_quaternion_msg[i*2+6] & 0x00FF );
+            // Serial.print(imu_quaternion[i]);
+            // Serial.print("\t");
           } // end for i
+          // Serial.println(" ");
         } else { // check sum not meet
           // TODO : error handle
           for (int i=0; i<4; i++) {
             imu_quaternion[i] = -1;
           } // end for i
+
+          // TODO : may be reset IMU
+          // Serial.println("Wrong checksum!!!");
+
+          // reset IMU
+          this->imu_turn_off();
+          delay(100);
+          this->imu_init(1);
         } // end if checksum
+
+        //delay(100);
 
 
       } // end if Serial 2
+
+      // release IMU INT pin
+      
 
       break;
 
@@ -240,4 +282,27 @@ uint8_t NTREK::checksum(uint8_t vals[], int length){
   return (uint8_t)csum;
 } 
 
+int NTREK::bluetooth_start(void) {
+  // Power cycle Bluetooth module
+  this->io_set(POW_EN_BT, LOW);
+  delay(1000);
+  this->io_set(POW_EN_BT, HIGH);
+  return 1; 
+}
 
+int NTREK::bluetooth_echo(void) {
+
+  // echo Bluetooth data read
+  int incomingByte = 0;   // for incoming serial data
+
+  if (Serial.available() > 0) {
+          // read the incoming byte:
+          incomingByte = Serial.read();
+
+          // say what you got:
+          Serial.print("BT received: ");
+          Serial.println(incomingByte, DEC);
+  }
+
+  return 1;
+}

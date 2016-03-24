@@ -41,6 +41,9 @@ class NTREK
     int imu_update(int mode);
     int imu_calibration(int mode);
     uint8_t checksum(uint8_t vals[], int length);
+
+    int bluetooth_start(void);
+    int bluetooth_echo(void);
     
     uint8_t imu_data_kf[IMU_KF_DATA_BUFFER_LENGTH];
     int16_t imu_kf_roll;
